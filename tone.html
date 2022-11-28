@@ -1,0 +1,193 @@
+<html><script>
+/*Developed between september 14-15, 2021
+by W. Calera at github.com/codesearcher
+*/
+</script>
+<head><meta charset="utf-8">
+<script src="Tone.js"></script>
+<script src="vexflow-min.js" ></script>
+<link rel="stylesheet" href="tone.css">
+<script>
+function geraAleatorio(min, max) { //generates random number between min and max
+  return Math.round( Math.random() * (max - min) - (0-min)) ;
+}
+
+function sound(nota){ //plays a note with alias 'nota'
+ const synth = new Tone.Synth().toDestination();
+ synth.triggerAttackRelease(nota, "8n");
+}
+
+function repetir(){ //repeat the last played note
+ sound(notas[notan])
+}
+
+function geranotas(){ //creates a matrix that associates midi notes (numbers)
+ notas=new Array(127); //with its name
+ for (var i=0; i<11; i++) {
+  for (var j=0; j<12; j++) {
+   notas[i*12+j]=notat[j]+(i-1);
+  } 
+ }
+ return notas;
+}
+
+function desenhanota(n,nota){ 	//Draws 'nota' musical note, n is the number of notes (future use)
+ document.getElementById("musicsheet").textContent ='';	
+ var VF = Vex.Flow;
+ const div = document.getElementById("musicsheet"); // Creates an SVG renderer
+ const renderer = new VF.Renderer(div, VF.Renderer.Backends.SVG);
+ renderer.resize(500, 130); // Configure the rendering context.
+ const context = renderer.getContext();
+ context.setFont("Arial", 10, "").setBackgroundFillStyle("#5f5"); 
+ // Create a stave of width 200 at position 10, 20 on the canvas.
+ const stave = new VF.Stave(10, 20, 200);
+ clave=document.getElementById("cbclave").value;// ='Points: '+acertos;
+ //clave='alto';//treble bass ou alto (clave de do)
+ stave.addClef( clave ).addTimeSignature("4/4"); // Add a clef and time signature.
+ stave.setContext(context).draw(); // Connect it to the rendering context and draw!
+ sigla=notat[nota % 12]; //transform midi '60' into a 'C4', for example
+ console.log('sigla:'+sigla)
+ var notes = [ //q=quarter notes h=half notes w=whole notes
+  new VF.StaveNote({clef:clave, keys:[sigla+"/4" ], duration:"w" })
+ ];
+ if (sigla.length>1){ //If sharped note, C# for instance
+ var notes = [
+  new VF.StaveNote({clef:clave, keys:[sigla+"/4" ], duration:"w" }).addAccidental(0, new VF.Accidental("#"))
+ ];
+ }
+ var voice = new VF.Voice({num_beats: 4,  beat_value: 4});  // Create a voice in 4/4 and add the notes from above
+ voice.addTickables(notes);
+ var formatter = new VF.Formatter().joinVoices([voice]).format([voice], 200); // Format and justify the notes to 200 pixels
+ voice.draw(context, stave); // Render voice
+ return true;
+}
+
+function changeBgColor(color) { //Changes the background color
+   document.body.style.background = color;
+}
+
+function showVal(newVal,name){ //Inserts 'newVal' value into a html object called 'name'
+    document.getElementById(name).innerHTML=newVal;
+}
+
+function show(id){ //shows or hide a html object identified with 'id'
+ var elem = document.getElementById(id);
+ var vis  = elem.style.display;
+ console.log(id+' visibility is '+vis);
+ if (vis=='none' || vis==''){	//if not visible
+  elem.style.display='block';; 	//shows it
+ }else{							//if visible
+  elem.style.display='none'; 	// hide it
+ }
+}
+
+function novanota(m){  //Creates a new note
+ nmin=document.getElementById("slmin").value;	//Takes the values of
+ nmax=document.getElementById("slmax").value;	//configurations
+ part=document.getElementById("ckpart").checked;
+ som =document.getElementById("cksom").checked;
+ console.log('MIDI Min/max :'+nmin+'/'+nmax)
+ n=geraAleatorio(nmin,nmax);		//creates a random number called n
+ if (som){ sound(notas[n]);}		//if checkbox to emit sound is ticked, plays the note
+ console.log('nota midi aleatoria:'+n+' => '+notas[n]);
+ respondida=false;
+ console.log('Desenha partitura?'+part);
+ if (part){	//if checkbox to show music sheet is ticked...
+  desenhanota(m,n);	//creates it : drawnote(how many notes , a note)
+ }else{ document.getElementById("musicsheet").textContent ='';	} //else clears its place
+ return n; //return the played note
+}
+
+function proxima(n){ //goes to the next 'n' notes - until by now
+ notan=novanota(n);
+}
+
+//Inicialization
+notat  =['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'] //notes in text
+notas  =geranotas(); //notes in number
+notan  =0; //the new note - in number format
+acertos=0; //number of points
+erros  =0; //number of errors
+porc   =0; //points in percentage
+respondida=false; //marks if a question was already responded
+
+document.addEventListener('keydown', (event) => { //listen the keyboard events
+  notak=['Z','S' ,'X','D' ,'C','V','G' ,'B','H' ,'N','J' ,'M'] //notes in keyboard
+  var name = event.key;
+  var code = event.code;
+  console.log('Key pressed '+name+'  Key code value: '+code);
+  tmp=notan % 12;//descobrir a letra que corresponde a nota tocada
+  console.log(tmp)
+  if (respondida && name=='ArrowRight'){
+   proxima(1);
+   changeBgColor('white');
+  }else if (name.toUpperCase()=='R' && respondida==false){
+   repetir();
+  }else if (name.toUpperCase()==notak[tmp] && respondida==false){ //right answer
+   acertos+=1
+   document.getElementById("labelac").textContent ='Acertos: '+acertos; //add 1 point
+   respondida=true;
+   changeBgColor('#AAFFAA'); //change background to green
+  }else if (!respondida){ //if answered wrong...
+   erros+=1;
+   document.getElementById("labeler").textContent ='Erros: '+erros; //increments 1 error
+   respondida=true;
+   changeBgColor('#FFAAAA'); //and turn red the background
+  }
+  porc=Math.trunc( acertos/(acertos+erros)*100 )
+  console.log(porc)
+  document.getElementById("labelpo").textContent =porc+'%';
+}, false);
+
+document.addEventListener('readystatechange', function() { //less important:
+  proxima(0);											   //when a page is reloaded,
+  document.getElementById('config').style.display='none';  // hides configurations and help
+  document.getElementById('instru').style.display='none';
+  //document.getElementById("slmin").style.background-color = "aaaa00";
+}, false);
+</script>
+</head>
+<body>
+Guess the musical note<br>
+<div id="labelac"><marquee>To start, click next</marquee></br>Points: 0</div>
+<div id="labeler">Errors: 0</div> <div id="labelpo">0%</div><br>
+<div id="musicsheet" name="partitura"></div>
+<form>
+<input type=button onclick="repetir()" value="Repeat" \>
+<input type=button onclick="proxima(1)" value="Next" \>
+</form>
+<hr><h6>
+	
+<input type=button onclick="show('config')" value="Configurations" \>
+<div id='config'>
+<br>
+<table>
+ <tr>
+  <td>Clef:<select id=cbclave>
+	<option value='treble' selected="selected">Treble Clef</option>
+	<option value='bass'>Bass Clef</option>
+	<option value='alto'>Alto Clef</option>
+    </select></td>
+  <td>Minimum MIDI note:<div id="slmindiv">30</div>
+   <input type="range" class='slider' min="0" max="60" value="30" step=1 id="slmin" oninput="showVal(this.value,'slmindiv')" onchange="showVal(this.value,'slmindiv')">
+  </td><td></td>
+  <td>Maximum MIDI note:<div id="slmaxdiv">100</div>
+   <input type="range" class='slider' min="61" max="127" value="100" step=1 id="slmax" oninput="showVal(this.value,'slmaxdiv')" onchange="showVal(this.value,'slmaxdiv')">
+  </td>
+  <td><input type="checkbox" id="ckpart" checked=true /> Show score/music sheet<br>
+      <input type="checkbox" id="cksom" checked=true /> Plays sound</td>
+ </tr>
+</table>
+</div>
+
+<input type=button onclick="show('instru')" value="Instructions" \>
+<div id='instru' visible=false>
+Shortcuts<br>
+Musical notes <br>
+<img src='keymap.jpeg' /><br><br>
+Others:<br>
+Right arrow key : next question<br>
+R key: Repeats the sound of last note<br>
+</table>
+</div>
+</h6></body></html>
