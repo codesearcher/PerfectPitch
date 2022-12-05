@@ -1,0 +1,194 @@
+<html><script>
+/*Desenvolvido entre 14-15 setembro de 2021
+por W. Calera 0w0w7w at gmail.com
+*/
+</script>
+<head><meta charset="utf-8">
+<script src="Tone.js"></script>
+<script src="vexflow-min.js" ></script>
+<link rel="stylesheet" href="tone.css">
+<script>
+function geraAleatorio(min, max) {
+  return Math.round( Math.random() * (max - min) - (0-min)) ;
+}
+
+function sound(nota){ //toca uma nota
+ const synth = new Tone.Synth().toDestination();
+ synth.triggerAttackRelease(nota, "8n");
+}
+
+function repetir(){ //repete a ultima nota tocada
+ sound(notas[notan])
+}
+
+function geranotas(){ //cria matriz que relaciona notas midi
+ notas=new Array(127); //com o seu respectivo nome
+ for (var i=0; i<11; i++) {
+  for (var j=0; j<12; j++) {
+   notas[i*12+j]=notat[j]+(i-1);
+  } 
+ }
+ return notas;
+}
+
+function desenhanota(n,nota){
+ document.getElementById("boo").textContent ='';	
+ var VF = Vex.Flow;
+ const div = document.getElementById("boo"); // Create an SVG renderer
+ const renderer = new VF.Renderer(div, VF.Renderer.Backends.SVG);
+ renderer.resize(500, 130); // Configure the rendering context.
+ const context = renderer.getContext();
+ context.setFont("Arial", 10, "").setBackgroundFillStyle("#5f5"); //eed
+ // Create a stave of width 400 at position 10, 40 on the canvas.
+ const stave = new VF.Stave(10, 20, 200);
+ clave=document.getElementById("cbclave").value;// ='Acertos: '+acertos;
+ //clave='alto';//treble bass ou alto (clave de do)
+ stave.addClef( clave ).addTimeSignature("4/4"); // Add a clef and time signature.
+ stave.setContext(context).draw(); // Connect it to the rendering context and draw!
+ sigla=notat[nota % 12]; //de midi 60 a C4 por exemplo
+ console.log('sigla:'+sigla)
+ var notes = [ //q=seminima h=minima w=semibreve
+  new VF.StaveNote({clef:clave, keys:[sigla+"/4" ], duration:"w" })
+ ];
+ if (sigla.length>1){ //se sustenido
+ var notes = [
+  new VF.StaveNote({clef:clave, keys:[sigla+"/4" ], duration:"w" }).addAccidental(0, new VF.Accidental("#"))
+ ];
+ }
+ var voice = new VF.Voice({num_beats: 4,  beat_value: 4});  // Create a voice in 4/4 and add the notes from above
+ voice.addTickables(notes);
+ var formatter = new VF.Formatter().joinVoices([voice]).format([voice], 200); // Format and justify the notes to 400 pixels
+ voice.draw(context, stave); // Render voice
+ return true;
+}
+
+function changeBgColor(color) {
+   document.body.style.background = color;
+}
+
+function showVal(newVal,name){
+    document.getElementById(name).innerHTML=newVal;
+}
+
+function show(id){
+ var elem = document.getElementById(id);
+ var vis  = elem.style.display;
+ console.log(id+' visibility is '+vis);
+ if (vis=='none' || vis==''){
+  elem.style.display='block';;
+ }else{
+  elem.style.display='none';
+ }
+}
+
+function novanota(m){
+ nmin=document.getElementById("slmin").value;
+ nmax=document.getElementById("slmax").value;
+ part=document.getElementById("ckpart").checked;
+ som =document.getElementById("cksom").checked;
+ console.log('MIDI Min/max :'+nmin+'/'+nmax)
+ n=geraAleatorio(nmin,nmax);
+ if (som){ sound(notas[n]);}
+ console.log('nota midi aleatoria:'+n+' => '+notas[n]);
+ respondida=false;
+ console.log('Desenha partitura?'+part);
+ if (part){
+  desenhanota(m,n);
+ }else{ document.getElementById("boo").textContent ='';	} //console.table(notas)
+ return n;
+}
+
+function proxima(n){ //vai para a proxima pergunta musical
+ notan=novanota(n);
+}
+
+//Inicialização
+notat  =['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+notas  =geranotas(); 
+notan  =0; //nota nova - em formato numero
+acertos=0;
+erros  =0;
+porc   =0;
+respondida=false; //assinala se uma questao ja foi respondida
+
+document.addEventListener('keydown', (event) => {
+  notak=['Z','S' ,'X','D' ,'C','V','G' ,'B','H' ,'N','J' ,'M']
+//notat=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B']
+  var name = event.key;
+  var code = event.code;
+  console.log('Key pressed '+name+'  Key code value: '+code);
+  tmp=notan % 12;//descobrir a letra que corresponde a nota tocada
+  console.log(tmp)
+  if (respondida && name=='ArrowRight'){
+   proxima(1);
+   changeBgColor('white');
+  }else if (name.toUpperCase()=='R' && respondida==false){
+   repetir();
+  }else if (name.toUpperCase()==notak[tmp] && respondida==false){
+   acertos+=1
+   document.getElementById("labelac").textContent ='Acertos: '+acertos;
+   respondida=true;
+   changeBgColor('#AAFFAA');
+  }else if (!respondida){
+   erros+=1;
+   document.getElementById("labeler").textContent ='Erros: '+erros;
+   respondida=true;
+   changeBgColor('#FFAAAA');
+  }
+  porc=Math.trunc( acertos/(acertos+erros)*100 )
+  console.log(porc)
+  document.getElementById("labelpo").textContent =porc+'%';
+}, false);
+
+document.addEventListener('readystatechange', function() {
+  proxima(0);
+  document.getElementById('config').style.display='none';
+  document.getElementById('instru').style.display='none';
+  //document.getElementById("slmin").style.background-color = "aaaa00";
+}, false);
+</script>
+</head>
+<body>
+Adivinhe a nota<br>
+<div id="labelac"><marquee>Para começar clique em próximo</marquee></br>Acertos: 0</div>
+<div id="labeler">Erros: 0</div> <div id="labelpo">0%</div><br>
+<div id="boo" name="partitura"></div>
+<form>
+<input type=button onclick="repetir()" value="Repetir" \>
+<input type=button onclick="proxima(1)" value="Próximo" \>
+</form>
+<hr><h6>
+	
+<input type=button onclick="show('config')" value="Configurações" \>
+<div id='config'>
+<br>
+<table>
+ <tr>
+  <td>Clave:<select id=cbclave>
+	<option value='treble' selected="selected">Clave de Sol</option>
+	<option value='bass'>Clave de Fá</option>
+	<option value='alto'>Clave de Dó</option>
+    </select></td>
+  <td>Nota MIDI mínima:<div id="slmindiv">10</div>
+   <input type="range" class='slider' min="0" max="60" value="30" step=1 id="slmin" oninput="showVal(this.value,'slmindiv')" onchange="showVal(this.value,'slmindiv')">
+  </td><td></td>
+  <td>Nota MIDI máxima:<div id="slmaxdiv">100</div>
+   <input type="range" class='slider' min="61" max="127" value="100" step=1 id="slmax" oninput="showVal(this.value,'slmaxdiv')" onchange="showVal(this.value,'slmaxdiv')">
+  </td>
+  <td><input type="checkbox" id="ckpart" checked=true /> Mostrar partitura<br>
+      <input type="checkbox" id="cksom" checked=true /> Tocar som</td>
+ </tr>
+</table>
+</div>
+
+<input type=button onclick="show('instru')" value="Instruções" \>
+<div id='instru' visible=false>
+Atalhos<br>
+notas musicais <br>
+<img src='keymap.jpeg' /><br><br>
+Outras:<br>
+Seta direita : próxima pergunta<br>
+R : Repete o som da última nota<br>
+</table>
+</div>
+</h6></body></html>
